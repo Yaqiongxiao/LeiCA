@@ -11,7 +11,7 @@ parcels_filename = 'Gordon_2014_Parcels/Parcels_MNI_111.nii'
 labels_filename = 'Gordon_2014_Parcels/Parcels.xlsx'
 
 sorted_parcels_filename = 'Gordon_2014_Parcels/Parcels_MNI_111_sorted.nii.gz'
-sorted_labels_filename = 'Gordon_2014_Parcels/Parcels.xlsx'
+sorted_labels_filename = 'Gordon_2014_Parcels/Parcels_sorted.xlsx'
 
 df = pd.read_excel(labels_filename, index='ParcelID')
 
