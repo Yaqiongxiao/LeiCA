@@ -11,7 +11,6 @@ def extract_parcellation_time_series(in_data, parcellation_name, parcellations_d
     import os, pickle
     import numpy as np
 
-    print(parcellations_dict)
     if parcellations_dict[parcellation_name]['is_probabilistic']:  # use probab. nilearn
         masker = NiftiMapsMasker(maps_img=parcellations_dict[parcellation_name]['nii_path'])
     else:  # 0/1 labels
@@ -48,14 +47,14 @@ def calculate_connectivity_matrix(in_data, extraction_method):
     '''
 
     # fixme implement sparse inv covar
-    import os
+    import os, pickle
     import numpy as np
 
     if extraction_method == 'correlation':
         correlation_matrix = np.corrcoef(in_data.T)
         matrix = {'correlation': correlation_matrix}
 
-    if extraction_method == 'sparse_inverse_covariance':
+    elif extraction_method == 'sparse_inverse_covariance':
         # Compute the sparse inverse covariance
         from sklearn.covariance import GraphLassoCV
         estimator = GraphLassoCV()
@@ -66,16 +65,18 @@ def calculate_connectivity_matrix(in_data, extraction_method):
     else:
         raise (Exception('Unknown extraction method: %s' % extraction_method))
 
-    # load with matrix = np.load('matrix.npy')[np.newaxis][0]
-    matrix_file = os.path.join(os.getcwd(), 'matrix.npy')
-    np.save(matrix_file, matrix)
+    matrix_file = os.path.join(os.getcwd(), 'matrix.pkl')
+    with open(matrix_file, 'w') as f:
+        pickle.dump(matrix, f)
+
     return matrix, matrix_file
 
 
 #####################################
 # WORKFLOW
 #####################################
-def connectivity_matrix_wf(time_series_file,
+def connectivity_matrix_wf(subjects_list,
+                           preprocessed_data_dir,
                            working_dir,
                            ds_dir,
                            parcellations_dict,
@@ -110,17 +111,38 @@ def connectivity_matrix_wf(time_series_file,
     config.update_config(nipype_cfg)
     wf.config['execution']['crashdump_dir'] = os.path.join(working_dir, 'crash')
 
-    ds = Node(nio.DataSink(base_directory=ds_dir), name='ds')
+    ds = Node(nio.DataSink(), name='ds')
     ds.inputs.regexp_substitutions = [
-        ('subject_id_', ''),
+       # ('subject_id_', ''),
         ('_parcellation_', ''),
         ('_bp_freqs_', 'bp_'),
-        ('_extraction_method_', '')]  # [('_variabilty_MNIspace_3mm[0-9]*/', ''), ('_z_score[0-9]*/', '')]
+        ('_extraction_method_', ''),
+        ('_subject_id_[A0-9]*/', '')
+    ]
+
 
 
     #####################################
     # SET ITERATORS
     #####################################
+    # SUBJECTS ITERATOR
+    subjects_infosource = Node(util.IdentityInterface(fields=['subject_id']), name='subjects_infosource')
+    subjects_infosource.iterables = ('subject_id', subjects_list)
+
+    def add_subject_id_to_ds_dir_fct(subject_id, ds_path):
+        import os
+        out_path = os.path.join(ds_path, subject_id)
+        return out_path
+
+    add_subject_id_to_ds_dir = Node(util.Function(input_names=['subject_id', 'ds_path'],
+                                                  output_names=['out_path'],
+                                                  function=add_subject_id_to_ds_dir_fct),
+                                    name='add_subject_id_to_ds_dir')
+    wf.connect(subjects_infosource, 'subject_id', add_subject_id_to_ds_dir, 'subject_id')
+    add_subject_id_to_ds_dir.inputs.ds_path = ds_dir
+    wf.connect(add_subject_id_to_ds_dir, 'out_path', ds, 'base_directory')
+
+
 
     # PARCELLATION ITERATOR
     parcellation_infosource = Node(util.IdentityInterface(fields=['parcellation']), name='parcellation_infosource')
@@ -135,20 +157,35 @@ def connectivity_matrix_wf(time_series_file,
                                         name='extraction_method_infosource')
     extraction_method_infosource.iterables = ('extraction_method', extraction_methods_list)
 
+
+
+    # GET SUBJECT SPECIFIC FUNCTIONAL DATA
+    selectfiles_templates = {
+        'preproc_epi_mni': '{subject_id}/rsfMRI_preprocessing/epis_MNI_3mm/01_denoised/TR_645/preprocessed_fullspectrum_MNI_3mm.nii.gz',
+    }
+
+    selectfiles = Node(nio.SelectFiles(selectfiles_templates,
+                                       base_directory=preprocessed_data_dir),
+                       name="selectfiles")
+    wf.connect(subjects_infosource, 'subject_id', selectfiles, 'subject_id')
+
+
     ##############
     ## extract ts
     ##############
     # returns TR in ms
     get_TR = Node(ImageInfo(), name='get_TR')
-    get_TR.inputs.in_file = time_series_file
+    wf.connect(selectfiles, 'preproc_epi_mni', get_TR, 'in_file')
+
 
     parcellated_ts = Node(
         util.Function(input_names=['in_data', 'parcellation_name', 'parcellations_dict', 'bp_freqs', 'tr'],
                       output_names=['parcellation_time_series', 'parcellation_time_series_file', 'masker_file'],
                       function=extract_parcellation_time_series),
         name='parcellated_ts')
-    parcellated_ts.inputs.in_data = time_series_file
+
     parcellated_ts.inputs.parcellations_dict = parcellations_dict
+    wf.connect(selectfiles, 'preproc_epi_mni', parcellated_ts, 'in_data')
     wf.connect(parcellation_infosource, 'parcellation', parcellated_ts, 'parcellation_name')
     wf.connect(bp_filter_infosource, 'bp_freqs', parcellated_ts, 'bp_freqs')
     wf.connect(get_TR, 'TR', parcellated_ts, 'tr')
@@ -171,9 +208,9 @@ def connectivity_matrix_wf(time_series_file,
     ## ds
     ##############
 
-    wf.connect(parcellated_ts, 'parcellation_time_series_file', ds, 'con_mats.parcellated_time_series.@parc_ts')
-    wf.connect(parcellated_ts, 'masker_file', ds, 'con_mats.parcellated_time_series.@masker')
-    wf.connect(con_mat, 'matrix_file', ds, 'con_mats.matrix.@mat')
+    wf.connect(parcellated_ts, 'parcellation_time_series_file', ds, 'metrics.con_mat.parcellated_time_series.@parc_ts')
+    wf.connect(parcellated_ts, 'masker_file', ds, 'metrics.con_mat.parcellated_time_series.@masker')
+    wf.connect(con_mat, 'matrix_file', ds, 'metrics.con_mat.matrix.@mat')
 
 
 
