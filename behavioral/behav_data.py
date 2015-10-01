@@ -40,6 +40,7 @@ sex_mapping = {1: 'M', 2: 'F'}
 df['sex'] = df.DEM_002
 df = df.replace({'sex': sex_mapping})
 
+df['age'] = df['AGE_04']
 
 # get health status
 diagnostics_file = glob.glob(os.path.join(behav_files_path, '*_Diagnostic Summary_*'))[0]
@@ -69,7 +70,9 @@ df = df[~df.index.duplicated()]
 # remove bad subjects (e.g. failed preprocessing/only few TRs)
 
 bad_subjects_list = ['0124028',
-                     'A00051882']
+                     'A00051882',
+                     '0132717',  # NO GORDON
+                     ]
 
 for b in bad_subjects_list:
     df = df[~(df.leica_id == b)]
