@@ -20,7 +20,7 @@ full_subjects_list.remove('A00056097')
 
 #fixme
 plugin_name = 'MultiProc'
-use_n_procs = 15
+use_n_procs = 25
 
 
 subjects_list = full_subjects_list
