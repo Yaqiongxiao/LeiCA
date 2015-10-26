@@ -353,7 +353,7 @@ def recompose_dwi(in_dwi, in_bval, in_corrected, out_file=None):
     bvals = np.loadtxt(in_bval)
     dwis = np.where(bvals != 0)[0].tolist()
 
-    if len(dwis) != len(in_correctedin_corrected):
+    if len(dwis) != len(in_corrected):
         raise RuntimeError(('Length of DWIs in b-values table and after'
                             'correction should match'))
 
