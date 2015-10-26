@@ -1,11 +1,11 @@
 # coding: utf-8
 
 from __future__ import absolute_import
-
-from ....pipeline import engine as pe
-from ....interfaces import utility as niu
-from ....interfaces import fsl
-from ....algorithms import misc
+# FL removed relavive imports (don't work) ....interfaces.io -> nipype.interfaces.io
+from nipype.pipeline import engine as pe
+from nipype.interfaces import utility as niu
+from nipype.interfaces import fsl
+from nipype.algorithms import misc
 
 #backwards compatibility
 from .epi import create_eddy_correct_pipeline

@@ -6,11 +6,12 @@ from __future__ import division
 from builtins import zip
 from builtins import next
 from builtins import range
+# FL removed relavive imports (don't work) ....interfaces.io -> nipype.interfaces.io
 
-from ....pipeline import engine as pe
-from ....interfaces import utility as niu
-from ....interfaces import fsl
-from ....interfaces import ants
+from nipype.pipeline import engine as pe
+from nipype.interfaces import utility as niu
+from nipype.interfaces import fsl
+from nipype.interfaces import ants
 
 
 def cleanup_edge_pipeline(name='Cleanup'):
@@ -99,6 +100,8 @@ def dwi_flirt(name='DWICoregistration', excl_nodiff=False,
     split = pe.Node(fsl.Split(dimension='t'), name='SplitDWIs')
     pick_ref = pe.Node(niu.Select(), name='Pick_b0')
     n4 = pe.Node(ants.N4BiasFieldCorrection(dimension=3), name='Bias')
+
+
     enhb0 = pe.Node(niu.Function(
         input_names=['in_file', 'in_mask', 'clip_limit'],
         output_names=['out_file'], function=enhance), name='B0Equalize')
@@ -350,7 +353,7 @@ def recompose_dwi(in_dwi, in_bval, in_corrected, out_file=None):
     bvals = np.loadtxt(in_bval)
     dwis = np.where(bvals != 0)[0].tolist()
 
-    if len(dwis) != len(in_corrected):
+    if len(dwis) != len(in_correctedin_corrected):
         raise RuntimeError(('Length of DWIs in b-values table and after'
                             'correction should match'))
 

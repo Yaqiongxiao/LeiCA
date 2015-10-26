@@ -3,12 +3,14 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 from __future__ import division
 
-from ....interfaces.io import JSONFileGrabber
-from ....interfaces import utility as niu
-from ....interfaces import ants
-from ....interfaces import fsl
-from ....pipeline import engine as pe
-from .utils import (b0_indices, time_avg, apply_all_corrections, b0_average,
+# FL removed relavive imports (don't work) ....interfaces.io -> nipype.interfaces.io
+
+from nipype.interfaces.io import JSONFileGrabber
+from nipype.interfaces import utility as niu
+from nipype.interfaces import ants
+from nipype.interfaces import fsl
+from nipype.pipeline import engine as pe
+from utils import (b0_indices, time_avg, apply_all_corrections, b0_average,
                     hmc_split, dwi_flirt, eddy_rotate_bvecs, rotate_bvecs,
                     insert_mat, extract_bval, recompose_dwi, recompose_xfm,
                     siemens2rads, rads2radsec, demean_image,
