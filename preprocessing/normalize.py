@@ -83,17 +83,28 @@ def normalize_epi(subjects_list,
 
 
 
-    # fixme
     # CREATE TS IN MNI SPACE
-    epi_MNI = Node(fsl.ApplyWarp(), name='epi_MNI')
-    epi_MNI.inputs.interp = 'spline'
-    epi_MNI.plugin_args = {'submit_specs': 'request_memory = 4000'}
-    wf.connect(selectfiles, 'preproc_epi_full_spectrum', epi_MNI, 'in_file')
-    wf.connect(selectfiles, 'epi_2_MNI_warp', epi_MNI, 'field_file')
-    wf.connect(selectfiles_anat_templates, 'FSL_MNI_3mm_template', epi_MNI, 'ref_file')
-    epi_MNI.inputs.out_file = 'preprocessed_fullspectrum_MNI_3mm.nii.gz'
+    epi_MNI_01_denoised = Node(fsl.ApplyWarp(), name='epi_MNI_01_denoised')
+    epi_MNI_01_denoised.inputs.interp = 'spline'
+    epi_MNI_01_denoised.plugin_args = {'submit_specs': 'request_memory = 4000'}
+    wf.connect(selectfiles, 'preproc_epi_full_spectrum', epi_MNI_01_denoised, 'in_file')
+    wf.connect(selectfiles, 'epi_2_MNI_warp', epi_MNI_01_denoised, 'field_file')
+    wf.connect(selectfiles_anat_templates, 'FSL_MNI_3mm_template', epi_MNI_01_denoised, 'ref_file')
+    epi_MNI_01_denoised.inputs.out_file = 'preprocessed_fullspectrum_MNI_3mm.nii.gz'
 
-    wf.connect(epi_MNI, 'out_file', ds, 'rsfMRI_preprocessing.epis_MNI_3mm.01_denoised')
+    wf.connect(epi_MNI_01_denoised, 'out_file', ds, 'rsfMRI_preprocessing.epis_MNI_3mm.01_denoised')
+
+
+
+    epi_MNI_03_bp_tNorm = Node(fsl.ApplyWarp(), name='epi_MNI_03_bp_tNorm')
+    epi_MNI_03_bp_tNorm.inputs.interp = 'spline'
+    epi_MNI_03_bp_tNorm.plugin_args = {'submit_specs': 'request_memory = 4000'}
+    wf.connect(selectfiles, 'preproc_epi_bp_tNorm', epi_MNI_03_bp_tNorm, 'in_file')
+    wf.connect(selectfiles, 'epi_2_MNI_warp', epi_MNI_03_bp_tNorm, 'field_file')
+    wf.connect(selectfiles_anat_templates, 'FSL_MNI_3mm_template', epi_MNI_03_bp_tNorm, 'ref_file')
+    epi_MNI_03_bp_tNorm.inputs.out_file = 'residual_filt_norm_warp.nii.gz'
+
+    wf.connect(epi_MNI_03_bp_tNorm, 'out_file', ds, 'rsfMRI_preprocessing.epis_MNI_3mm.03_denoised_BP_tNorm')
 
 
     #####################################

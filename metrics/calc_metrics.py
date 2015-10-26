@@ -441,6 +441,7 @@ def calc_centrality_metrics(cfg):
         'epi_2_struct_mat': '{subject_id}/rsfMRI_preprocessing/registration/epi_2_struct_mat/TR_{TR_id}/*.mat',
         't1w': '{subject_id}/raw_niftis/sMRI/t1w_reoriented.nii.gz',
         't1w_brain': '{subject_id}/rsfMRI_preprocessing/struct_prep/t1w_brain/t1w_reoriented_maths.nii.gz',
+        'epi_bp_tNorm_MNIspace_3mm': '{subject_id}/rsfMRI_preprocessing/epis_MNI_3mm/03_denoised_BP_tNorm/TR_645/residual_filt_norm_warp.nii.gz'
     }
 
     selectfiles = Node(nio.SelectFiles(selectfiles_templates,
@@ -450,8 +451,6 @@ def calc_centrality_metrics(cfg):
     wf.connect(subjects_infosource, 'subject_id', selectfiles, 'subject_id')
     # selectfiles.inputs.subject_id = subject_id
 
-
-
     # CREATE TRANSFORMATIONS
     # creat MNI 2 epi warp
     MNI_2_epi_warp = Node(fsl.InvWarp(), name='MNI_2_epi_warp')
@@ -459,24 +458,9 @@ def calc_centrality_metrics(cfg):
     wf.connect(selectfiles, 'epi_mask', MNI_2_epi_warp, 'reference')
     wf.connect(selectfiles, 'epi_2_MNI_warp', MNI_2_epi_warp, 'warp')
 
-
-
-
-    # CREATE TS IN MNI SPACE
-    epi_bp_tNorm_MNIspace_3mm = Node(fsl.ApplyWarp(), name='epi_bp_tNorm_MNIspace_3mm')
-    epi_bp_tNorm_MNIspace_3mm.inputs.interp = 'spline'
-    epi_bp_tNorm_MNIspace_3mm.plugin_args = {'submit_specs': 'request_memory = 4000'}
-    wf.connect(selectfiles_anat_templates, 'FSL_MNI_3mm_template', epi_bp_tNorm_MNIspace_3mm, 'ref_file')
-    wf.connect(selectfiles, 'preproc_epi_bp_tNorm', epi_bp_tNorm_MNIspace_3mm, 'in_file')
-    wf.connect(selectfiles, 'epi_2_MNI_warp', epi_bp_tNorm_MNIspace_3mm, 'field_file')
-    wf.connect(epi_bp_tNorm_MNIspace_3mm, 'out_file', ds, 'rsfMRI_preprocessing.epis_MNI_3mm.03_denoised_BP_tNorm')
-
     #####################
     # CALCULATE METRICS
     #####################
-
-
-
 
     # DEGREE
     # fixme
@@ -494,7 +478,7 @@ def calc_centrality_metrics(cfg):
     dc.inputs.inputspec.threshold = 0.0001
     dc.inputs.inputspec.weight_options = [True,
                                           True]  # list of two booleans for binarize and weighted options respectively
-    wf.connect(epi_bp_tNorm_MNIspace_3mm, 'out_file', dc, 'inputspec.subject')
+    wf.connect(selectfiles, 'epi_bp_tNorm_MNIspace_3mm', dc, 'inputspec.subject')
     wf.connect(selectfiles_anat_templates, 'GM_mask_MNI_3mm', dc, 'inputspec.template')
     wf.connect(dc, 'outputspec.centrality_outputs', ds, 'metrics.centrality.dc.@centrality_outputs')
     wf.connect(dc, 'outputspec.correlation_matrix', ds, 'metrics.centrality.dc.@correlation_matrix')
@@ -515,7 +499,7 @@ def calc_centrality_metrics(cfg):
     evc.inputs.inputspec.threshold = 0.0001
     evc.inputs.inputspec.weight_options = [True,
                                            True]  # list of two booleans for binarize and weighted options respectively
-    wf.connect(epi_bp_tNorm_MNIspace_3mm, 'out_file', evc, 'inputspec.subject')
+    wf.connect(selectfiles, 'epi_bp_tNorm_MNIspace_3mm', evc, 'inputspec.subject')
     wf.connect(selectfiles_anat_templates, 'GM_mask_MNI_3mm', evc, 'inputspec.template')
     wf.connect(evc, 'outputspec.centrality_outputs', ds, 'metrics.centrality.evc.@centrality_outputs')
     wf.connect(evc, 'outputspec.correlation_matrix', ds, 'metrics.centrality.evc.@correlation_matrix')
