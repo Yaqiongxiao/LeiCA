@@ -2,6 +2,14 @@ import os
 import pandas as pd
 import numpy as np
 
+def import_spss_raw(filename):
+    '''
+    import spss via r and return pandas df
+    '''
+    import pandas.rpy.common as com
+    df = com.robj.r('foreign::read.spss("%s", to.data.frame=TRUE)' % filename)
+    df = com.convert_robj(df)
+    return df
 
 def get_health_status(filename):
     #     def get_no_axis_1(s):
